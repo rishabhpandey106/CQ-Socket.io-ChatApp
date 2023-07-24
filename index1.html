@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iChat</title>
+    <style>
+        .container {
+            height: 70vh;
+            border: 2px solid black;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            width: 70vw;
+            margin: auto;
+            overflow-y: auto;
+        }
+
+        .messages {
+            width: 40%;
+            margin: 10px;
+            padding: 5px;
+            border-radius: 10px;
+            border: 2px solid black;
+            background-color: white;
+            font-size: large;
+        }
+
+        .left {
+            float: left;
+            clear: both;
+        }
+
+        .right {
+            float: right;
+            clear: both;
+        }
+
+        .center {
+            margin-top: 10px;
+            clear: both;
+            margin: auto;
+            background-color: rgb(255, 255, 28);
+            width: 20%;
+            font-size: medium;
+            font-family: cursive;
+            border: none;
+            margin-bottom: 10px;
+        }
+
+        body {
+            background: linear-gradient(white, green);
+            height: 100vh;
+        }
+
+        #form {
+            margin-top: 20px;
+            display: block;
+            text-align: center;
+        }
+
+        #input {
+            width: 50%;
+            height: 5vh;
+            font-size: large;
+            border-radius: 10px;
+
+        }
+
+        #btn {
+            height: 5vh;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        #typingStatus {
+            display : block;
+            margin : auto;
+            text-align: center;
+        }
+
+        .private-left {
+            float: left;
+            clear: both;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div style="text-align: center; ">
+        <h1 style="margin-top:20px">Socket.io Chat Assignment</h1>
+    </div>
+    <div id="typingStatus"></div>
+    <div class="container">
+    </div>
+    <form action="#" id="form">
+        <input id="input" type="text" placeholder="Type messages">
+        <input id="toInput" type="text" placeholder="Enter recipient's name">
+        <button id="btn" type="submit">Send</button>
+    </form>
+    
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        var socket = io();
+
+        const name = prompt("Enter name to join the chat");
+        socket.emit('new-user-joined', name);
+
+        const append = (message, location) => {
+            const div = document.createElement('div');
+            div.classList.add('messages');
+            div.classList.add(location);
+            div.innerText = message;
+            const container = document.querySelector('.container');
+            container.append(div);
+        }
+
+        socket.on('user-joined', name => {
+            append(`${name} joined the chat`, 'center');
+        });
+
+        const toInput = document.getElementById('toInput');
+        const form = document.getElementById('form');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('input')
+            const msg = input.value;
+            const toUser = toInput.value;
+
+            if (toUser && msg) {
+            socket.emit('private-message', { to: toUser, message: msg });
+            } else {
+            socket.emit('send', msg);
+            }
+
+            append(`You : ${msg}`, 'right');
+            input.value = '';
+            socket.emit('stop-typing');
+            
+        });
+
+        socket.on('receive', obj => {
+            append(`${obj.user} : ${obj.message}`, 'left');
+        });
+        socket.on('left', name => {
+            append(`${name} left the chat`, 'center');
+        })
+
+        socket.on('private-message', ({ from, message }) => {
+        const recipient = document.getElementById('toInput').value;
+        append(`${from} (private) : ${message}`, 'private-left');
+        });
+
+
+        const input = document.getElementById('input');
+    input.addEventListener('input', () => {
+      if (input.value !== '') {
+        socket.emit('typing');
+      } else {
+        socket.emit('stop-typing');
+      }
+    });
+
+    socket.on('user-typing', (user) => {
+      const typingStatus = document.getElementById('typingStatus');
+      typingStatus.textContent = `${user} is typing...`;
+    });
+
+    socket.on('user-stop-typing', () => {
+      const typingStatus = document.getElementById('typingStatus');
+      typingStatus.textContent = '';
+    });
+    </script>
+</body>
+
+</html>
